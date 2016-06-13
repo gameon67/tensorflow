@@ -695,6 +695,9 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
   cross_entropy_mean = tf.reduce_mean(cross_entropy)
   train_step = tf.train.GradientDescentOptimizer(FLAGS.learning_rate).minimize(
       cross_entropy_mean)
+
+
+
   return (train_step, cross_entropy_mean, bottleneck_input, ground_truth_input,
           final_tensor)
 
@@ -715,6 +718,9 @@ def add_evaluation_step(result_tensor, ground_truth_tensor):
   evaluation_step = tf.reduce_mean(tf.cast(correct_prediction, 'float'))
   return evaluation_step
 
+def add_prediction_step(result_tensor):
+  prediction = tf.argmax(final_tensor,1)
+  return prediction
 
 def main(_):
   # Set up the pre-trained graph.
@@ -806,14 +812,19 @@ def main(_):
       print('%s: Step %d: Validation accuracy = %.1f%%' %
             (datetime.now(), i, validation_accuracy * 100))
 
+  prediction_step = add_prediction_step(final_tensor)
+
   # We've completed all our training, so run a final test evaluation on
   # some new images we haven't used before.
   test_bottlenecks, test_ground_truth = get_random_cached_bottlenecks(
       sess, image_lists, FLAGS.test_batch_size, 'testing',
       FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
       bottleneck_tensor)
-  test_accuracy = sess.run(
-      evaluation_step,
+
+
+
+  test_accuracy, predictions = sess.run(
+      [evaluation_step, prediction_step],
       feed_dict={bottleneck_input: test_bottlenecks,
                  ground_truth_input: test_ground_truth})
   print('Final test accuracy = %.1f%%' % (test_accuracy * 100))
@@ -826,7 +837,7 @@ def main(_):
   with gfile.FastGFile(FLAGS.output_labels, 'w') as f:
     f.write('\n'.join(image_lists.keys()) + '\n')
 
-  save(final_tensor, '/tmp/final_tensor.pkl')
+  save(predictions, '/tmp/predictions.pkl')
   save(test_ground_truth, '/tmp/test_ground_truth.pkl')
   save(image_lists, '/tmp/image_lists.pkl')
 
