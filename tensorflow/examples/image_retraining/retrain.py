@@ -826,11 +826,9 @@ def main(_):
   with gfile.FastGFile(FLAGS.output_labels, 'w') as f:
     f.write('\n'.join(image_lists.keys()) + '\n')
 
-  save(test_bottlenecks, '/tmp/test_bottlenecks.pkl')
+  save(final_tensor, '/tmp/final_tensor.pkl')
   save(test_ground_truth, '/tmp/test_ground_truth.pkl')
   save(image_lists, '/tmp/image_lists.pkl')
-  with gfile.FastGFile('/tmp/test_images', 'w') as f:
-    f.write('\n'.join(test_paths) + '\n')
 
 
 if __name__ == '__main__':
