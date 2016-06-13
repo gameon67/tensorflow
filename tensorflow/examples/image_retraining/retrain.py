@@ -71,6 +71,8 @@ from tensorflow.python.client import graph_util
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.platform import gfile
 
+import cPickle
+
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -150,6 +152,11 @@ MODEL_INPUT_HEIGHT = 299
 MODEL_INPUT_DEPTH = 3
 JPEG_DATA_TENSOR_NAME = 'DecodeJpeg/contents:0'
 RESIZED_INPUT_TENSOR_NAME = 'ResizeBilinear:0'
+
+def save(data, file):
+    fo = open(file, 'w')
+    cPickle.dump(data, fo, protocol=2)
+    fo.close()
 
 
 def create_image_lists(image_dir, testing_percentage, validation_percentage):
@@ -407,7 +414,7 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,
   with open(bottleneck_path, 'r') as bottleneck_file:
     bottleneck_string = bottleneck_file.read()
   bottleneck_values = [float(x) for x in bottleneck_string.split(',')]
-  return bottleneck_values
+  return bottleneck_values, bottleneck_path
 
 
 def cache_bottlenecks(sess, image_lists, image_dir, bottleneck_dir,
@@ -474,11 +481,12 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
   class_count = len(image_lists.keys())
   bottlenecks = []
   ground_truths = []
+  img_paths = []
   for unused_i in range(how_many):
     label_index = random.randrange(class_count)
     label_name = list(image_lists.keys())[label_index]
     image_index = random.randrange(65536)
-    bottleneck = get_or_create_bottleneck(sess, image_lists, label_name,
+    bottleneck, path = get_or_create_bottleneck(sess, image_lists, label_name,
                                           image_index, image_dir, category,
                                           bottleneck_dir, jpeg_data_tensor,
                                           bottleneck_tensor)
@@ -486,6 +494,7 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
     ground_truth[label_index] = 1.0
     bottlenecks.append(bottleneck)
     ground_truths.append(ground_truth)
+    img_paths.append(path)
   return bottlenecks, ground_truths
 
 
@@ -767,7 +776,7 @@ def main(_):
           FLAGS.image_dir, distorted_jpeg_data_tensor,
           distorted_image_tensor, resized_image_tensor, bottleneck_tensor)
     else:
-      train_bottlenecks, train_ground_truth = get_random_cached_bottlenecks(
+      train_bottlenecks, train_ground_truth, _ = get_random_cached_bottlenecks(
           sess, image_lists, FLAGS.train_batch_size, 'training',
           FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
           bottleneck_tensor)
@@ -787,7 +796,7 @@ def main(_):
                                                       train_accuracy * 100))
       print('%s: Step %d: Cross entropy = %f' % (datetime.now(), i,
                                                  cross_entropy_value))
-      validation_bottlenecks, validation_ground_truth = (
+      validation_bottlenecks, validation_ground_truth, _ = (
           get_random_cached_bottlenecks(
               sess, image_lists, FLAGS.validation_batch_size, 'validation',
               FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
@@ -801,7 +810,7 @@ def main(_):
 
   # We've completed all our training, so run a final test evaluation on
   # some new images we haven't used before.
-  test_bottlenecks, test_ground_truth = get_random_cached_bottlenecks(
+  test_bottlenecks, test_ground_truth, test_paths = get_random_cached_bottlenecks(
       sess, image_lists, FLAGS.test_batch_size, 'testing',
       FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
       bottleneck_tensor)
@@ -818,6 +827,12 @@ def main(_):
     f.write(output_graph_def.SerializeToString())
   with gfile.FastGFile(FLAGS.output_labels, 'w') as f:
     f.write('\n'.join(image_lists.keys()) + '\n')
+
+  save(test_bottlenecks, '/tmp/test_bottlenecks.pkl')
+  save(test_ground_truth, '/tmp/test_ground_truth.pkl')
+  save(image_lists, '/tmp/test_ground_truth.pkl')
+  with gfile.FastGFile('/tmp/test_images', 'w') as f:
+    f.write('\n'.join(test_paths) + '\n')
 
 
 if __name__ == '__main__':
