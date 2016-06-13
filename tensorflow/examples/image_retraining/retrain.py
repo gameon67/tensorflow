@@ -849,7 +849,7 @@ def main(_):
 
   y_true = np.array(np.argmax(test_ground_truth, axis=1))
   classes = np.array(image_lists.keys())
-  img_paths = map(lambda x: FLAGS.image_dir + x.replace(FLAGS.bottleneck_dir,'').replace('.txt',''), img_paths)
+  img_paths = map(lambda x: x.replace(FLAGS.bottleneck_dir,'').replace('.txt',''), img_paths)
   results = np.stack([predictions, y_true, img_paths], axis=1)
   # results = np.stack([predictions, y_true, img_paths], axis=1)
   output = {
