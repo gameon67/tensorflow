@@ -72,12 +72,14 @@ from tensorflow.python.framework import tensor_shape
 from tensorflow.python.platform import gfile
 
 import cPickle
+import boto3
+s3 = boto3.resource('s3')
 
 
 FLAGS = tf.app.flags.FLAGS
 
 # Input and output file flags.
-tf.app.flags.DEFINE_string('image_dir', '',
+tf.app.flags.DEFINE_string('image_dir', '/Users/maxmelnick/Downloads/flower_photos',
                            """Path to folders of labeled images.""")
 tf.app.flags.DEFINE_string('output_graph', '/tmp/output_graph.pb',
                            """Where to save the trained graph.""")
@@ -85,7 +87,7 @@ tf.app.flags.DEFINE_string('output_labels', '/tmp/output_labels.txt',
                            """Where to save the trained graph's labels.""")
 
 # Details of the training configuration.
-tf.app.flags.DEFINE_integer('how_many_training_steps', 4000,
+tf.app.flags.DEFINE_integer('how_many_training_steps', 100,
                             """How many training steps to run before ending.""")
 tf.app.flags.DEFINE_float('learning_rate', 0.01,
                           """How large a learning rate to use when training.""")
@@ -153,10 +155,15 @@ MODEL_INPUT_DEPTH = 3
 JPEG_DATA_TENSOR_NAME = 'DecodeJpeg/contents:0'
 RESIZED_INPUT_TENSOR_NAME = 'ResizeBilinear:0'
 
-def save(data, file):
-    fo = open(file, 'w')
+def save(data, filename, add_datetime=False):
+    if add_datetime:
+      filename = filename + '_' + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    filename = filename + '.pkl'
+    fo = open(filename, 'w')
     cPickle.dump(data, fo, protocol=2)
     fo.close()
+    data_to_save = open(filename, 'rb')
+    s3.Bucket('mjm-image-classifier').put_object(Key=filename, Body=data_to_save)
 
 
 def create_image_lists(image_dir, testing_percentage, validation_percentage):
@@ -414,7 +421,7 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,
   with open(bottleneck_path, 'r') as bottleneck_file:
     bottleneck_string = bottleneck_file.read()
   bottleneck_values = [float(x) for x in bottleneck_string.split(',')]
-  return bottleneck_values
+  return bottleneck_values, bottleneck_path
 
 
 def cache_bottlenecks(sess, image_lists, image_dir, bottleneck_dir,
@@ -481,11 +488,12 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
   class_count = len(image_lists.keys())
   bottlenecks = []
   ground_truths = []
+  img_paths = []
   for unused_i in range(how_many):
     label_index = random.randrange(class_count)
     label_name = list(image_lists.keys())[label_index]
     image_index = random.randrange(65536)
-    bottleneck = get_or_create_bottleneck(sess, image_lists, label_name,
+    bottleneck, img_path = get_or_create_bottleneck(sess, image_lists, label_name,
                                           image_index, image_dir, category,
                                           bottleneck_dir, jpeg_data_tensor,
                                           bottleneck_tensor)
@@ -493,7 +501,8 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
     ground_truth[label_index] = 1.0
     bottlenecks.append(bottleneck)
     ground_truths.append(ground_truth)
-  return bottlenecks, ground_truths
+    img_paths.append(img_path)
+  return bottlenecks, ground_truths, img_paths
 
 
 def get_random_distorted_bottlenecks(
@@ -782,7 +791,7 @@ def main(_):
           FLAGS.image_dir, distorted_jpeg_data_tensor,
           distorted_image_tensor, resized_image_tensor, bottleneck_tensor)
     else:
-      train_bottlenecks, train_ground_truth = get_random_cached_bottlenecks(
+      train_bottlenecks, train_ground_truth, _ = get_random_cached_bottlenecks(
           sess, image_lists, FLAGS.train_batch_size, 'training',
           FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
           bottleneck_tensor)
@@ -802,7 +811,7 @@ def main(_):
                                                       train_accuracy * 100))
       print('%s: Step %d: Cross entropy = %f' % (datetime.now(), i,
                                                  cross_entropy_value))
-      validation_bottlenecks, validation_ground_truth = (
+      validation_bottlenecks, validation_ground_truth, _ = (
           get_random_cached_bottlenecks(
               sess, image_lists, FLAGS.validation_batch_size, 'validation',
               FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
@@ -817,7 +826,7 @@ def main(_):
 
   # We've completed all our training, so run a final test evaluation on
   # some new images we haven't used before.
-  test_bottlenecks, test_ground_truth = get_random_cached_bottlenecks(
+  test_bottlenecks, test_ground_truth, img_paths = get_random_cached_bottlenecks(
       sess, image_lists, FLAGS.test_batch_size, 'testing',
       FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
       bottleneck_tensor)
@@ -838,9 +847,16 @@ def main(_):
   with gfile.FastGFile(FLAGS.output_labels, 'w') as f:
     f.write('\n'.join(image_lists.keys()) + '\n')
 
-  save(predictions, '/tmp/predictions.pkl')
-  save(test_ground_truth, '/tmp/test_ground_truth.pkl')
-  save(image_lists, '/tmp/image_lists.pkl')
+  y_true = np.array(np.argmax(test_ground_truth, axis=1))
+  classes = np.array(image_lists.keys())
+  img_paths = map(lambda x: FLAGS.image_dir + x.replace(FLAGS.bottleneck_dir,'').replace('.txt',''), img_paths)
+  results = np.stack([predictions, y_true, img_paths], axis=1)
+  # results = np.stack([predictions, y_true, img_paths], axis=1)
+  output = {
+  'results': results,
+  'classes': classes
+  }
+  save(output, 'output')
 
 
 if __name__ == '__main__':
