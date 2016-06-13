@@ -719,8 +719,8 @@ def add_evaluation_step(result_tensor, ground_truth_tensor):
   return evaluation_step
 
 def add_prediction_step(result_tensor):
-  prediction = tf.argmax(final_tensor,1)
-  return prediction
+  prediction_step = tf.argmax(final_tensor,1)
+  return prediction_step
 
 def main(_):
   # Set up the pre-trained graph.
@@ -770,6 +770,8 @@ def main(_):
   # Create the operations we need to evaluate the accuracy of our new layer.
   evaluation_step = add_evaluation_step(final_tensor, ground_truth_input)
 
+  prediction_step = add_prediction_step(final_tensor)
+
   # Run the training for as many cycles as requested on the command line.
   for i in range(FLAGS.how_many_training_steps):
     # Get a catch of input bottleneck values, either calculated fresh every time
@@ -812,7 +814,6 @@ def main(_):
       print('%s: Step %d: Validation accuracy = %.1f%%' %
             (datetime.now(), i, validation_accuracy * 100))
 
-  prediction_step = add_prediction_step(final_tensor)
 
   # We've completed all our training, so run a final test evaluation on
   # some new images we haven't used before.
