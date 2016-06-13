@@ -719,7 +719,7 @@ def add_evaluation_step(result_tensor, ground_truth_tensor):
   return evaluation_step
 
 def add_prediction_step(result_tensor):
-  prediction_step = tf.argmax(final_tensor,1)
+  prediction_step = tf.argmax(result_tensor,1)
   return prediction_step
 
 def main(_):
