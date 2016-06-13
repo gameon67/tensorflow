@@ -79,7 +79,7 @@ s3 = boto3.resource('s3')
 FLAGS = tf.app.flags.FLAGS
 
 # Input and output file flags.
-tf.app.flags.DEFINE_string('image_dir', '/Users/maxmelnick/Downloads/flower_photos',
+tf.app.flags.DEFINE_string('image_dir', '',
                            """Path to folders of labeled images.""")
 tf.app.flags.DEFINE_string('output_graph', '/tmp/output_graph.pb',
                            """Where to save the trained graph.""")
@@ -87,7 +87,7 @@ tf.app.flags.DEFINE_string('output_labels', '/tmp/output_labels.txt',
                            """Where to save the trained graph's labels.""")
 
 # Details of the training configuration.
-tf.app.flags.DEFINE_integer('how_many_training_steps', 100,
+tf.app.flags.DEFINE_integer('how_many_training_steps', 4000,
                             """How many training steps to run before ending.""")
 tf.app.flags.DEFINE_float('learning_rate', 0.01,
                           """How large a learning rate to use when training.""")
