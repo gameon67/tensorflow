@@ -839,8 +839,6 @@ def main(_):
                                           FLAGS.final_tensor_name,
                                           bottleneck_tensor)
 
-  with
-
   # Create the operations we need to evaluate the accuracy of our new layer.
   evaluation_step = add_evaluation_step(final_tensor, ground_truth_input)
 
