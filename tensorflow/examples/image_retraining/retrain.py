@@ -167,6 +167,7 @@ def save(data, filename, add_datetime=False):
     fo.close()
     data_to_save = open(filename, 'rb')
     s3.Bucket('mjm-image-classifier').put_object(Key=filename, Body=data_to_save)
+    print('saved output as %s' % filename)
 
 
 def create_image_lists(image_dir, testing_percentage, validation_percentage):
@@ -983,6 +984,7 @@ def main(_):
   'classes': classes
   }
   save(output, 'output_' + FLAGS.run_name)
+
   # save(image_lists, 'image_lists', add_datetime=True)
 
 
