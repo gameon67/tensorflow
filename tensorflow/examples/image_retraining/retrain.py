@@ -759,8 +759,6 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
     train_step = tf.train.GradientDescentOptimizer(FLAGS.learning_rate).minimize(
         cross_entropy_mean)
 
-
-
   return (train_step, cross_entropy_mean, bottleneck_input, ground_truth_input,
           final_tensor)
 
@@ -895,25 +893,32 @@ def main(_):
       print('%s: Step %d: Validation accuracy = %.1f%%' %
             (datetime.now(), i, validation_accuracy * 100))
     else:  # Record train set summaries, and train
-      if i % 100 == 99:  # Record execution stats
-        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-        run_metadata = tf.RunMetadata()
-        summary, train_accuracy, cross_entropy_value = sess.run(
-            [merged, evaluation_step, cross_entropy],
-            feed_dict={bottleneck_input: train_bottlenecks,
-                       ground_truth_input: train_ground_truth},
-                                options=run_options,
-                                run_metadata=run_metadata)
-        train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
-        train_writer.add_summary(summary, i)
-        print('Adding run metadata for', i)
-      else:  # Record a summary
-        # Feed the bottlenecks and ground truth into the graph, and run a training
-        # step.
-        summary, _ = sess.run([merged, train_step],
-                 feed_dict={bottleneck_input: train_bottlenecks,
-                            ground_truth_input: train_ground_truth})
-        train_writer.add_summary(summary, i)
+      # Feed the bottlenecks and ground truth into the graph, and run a training
+      # step.
+      summary, _ = sess.run([merged, train_step],
+               feed_dict={bottleneck_input: train_bottlenecks,
+                          ground_truth_input: train_ground_truth})
+      train_writer.add_summary(summary, i)
+      # I think the metadata is causing some issues with AWS GPU so commenting out for now
+      # if i % 100 == 99:  # Record execution stats
+      #   run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+      #   run_metadata = tf.RunMetadata()
+      #   summary, train_accuracy, cross_entropy_value = sess.run(
+      #       [merged, evaluation_step, cross_entropy],
+      #       feed_dict={bottleneck_input: train_bottlenecks,
+      #                  ground_truth_input: train_ground_truth},
+      #                           options=run_options,
+      #                           run_metadata=run_metadata)
+      #   train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
+      #   train_writer.add_summary(summary, i)
+      #   print('Adding run metadata for', i)
+      # else:  # Record a summary
+      #   # Feed the bottlenecks and ground truth into the graph, and run a training
+      #   # step.
+      #   summary, _ = sess.run([merged, train_step],
+      #            feed_dict={bottleneck_input: train_bottlenecks,
+      #                       ground_truth_input: train_ground_truth})
+      #   train_writer.add_summary(summary, i)
 
   # We've completed all our training, so run a final test evaluation on
   # some new images we haven't used before.
