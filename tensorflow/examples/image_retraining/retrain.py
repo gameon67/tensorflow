@@ -686,9 +686,9 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, activation_name='a
         preactivate = tf.matmul(input_tensor, weights) + biases
         tf.histogram_summary(layer_name + '/pre_activations', preactivate)
       # activations = act(preactivate, 'activation')
-    with tf.name_scope(activation_name):
-      activations = act(preactivate)
-      tf.histogram_summary(layer_name + '/activations', activations)
+      with tf.name_scope(activation_name):
+        activations = act(preactivate)
+        tf.histogram_summary(layer_name + '/activations', activations)
     return preactivate, activations
 
 def variable_summaries(var, name):
@@ -937,7 +937,7 @@ def main(_):
 
   # Write out the trained graph and labels with the weights stored as constants.
   output_graph_def = graph_util.convert_variables_to_constants(
-      sess, graph.as_graph_def(), [FLAGS.final_tensor_name])
+      sess, graph.as_graph_def(), ['final_layer/'+FLAGS.final_tensor_name+'/Softmax'])
   with gfile.FastGFile(FLAGS.output_graph, 'wb') as f:
     f.write(output_graph_def.SerializeToString())
   with gfile.FastGFile(FLAGS.output_labels, 'w') as f:
