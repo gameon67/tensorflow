@@ -686,8 +686,10 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, activation_name='a
         preactivate = tf.matmul(input_tensor, weights) + biases
         tf.histogram_summary(layer_name + '/pre_activations', preactivate)
       # activations = act(preactivate, 'activation')
-      activations = act(preactivate, name=activation_name)
-      tf.histogram_summary(layer_name + '/activations', activations)
+      with tf.name-scope(activation_name):
+        print('activation_name', activation_name)
+        activations = act(preactivate, name=activation_name)
+        tf.histogram_summary(layer_name + '/activations', activations)
       return preactivate, activations
 
 def variable_summaries(var, name):
