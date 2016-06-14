@@ -666,7 +666,7 @@ def add_input_distortions(flip_left_right, random_crop, random_scale,
   distort_result = tf.expand_dims(brightened_image, 0, name='DistortResult')
   return jpeg_data, distort_result
 
-def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.softmax):
+def nn_layer(input_tensor, input_dim, output_dim, layer_name, activation_name='activation', act=tf.nn.softmax):
     """Reusable code for making a simple neural net layer.
 
     It does a matrix multiply, bias add, and then uses relu to nonlinearize.
@@ -685,7 +685,8 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.softmax)
       with tf.name_scope('Wx_plus_b'):
         preactivate = tf.matmul(input_tensor, weights) + biases
         tf.histogram_summary(layer_name + '/pre_activations', preactivate)
-      activations = act(preactivate, 'activation')
+      # activations = act(preactivate, 'activation')
+      activations = act(preactivate, name=activation_name)
       tf.histogram_summary(layer_name + '/activations', activations)
       return preactivate, activations
 
@@ -746,7 +747,7 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
   #                    name='final_matmul') + layer_biases
   # final_tensor = tf.nn.softmax(logits, name=final_tensor_name)
   logits, final_tensor = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, \
-    class_count, 'final_layer')
+    class_count, 'final_layer', FLAGS.final_tensor_name)
 
   with tf.name_scope('cross_entropy'):
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
