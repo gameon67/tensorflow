@@ -747,7 +747,7 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
   #                    name='final_matmul') + layer_biases
   # final_tensor = tf.nn.softmax(logits, name=final_tensor_name)
   logits, final_tensor = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, \
-    class_count, 'final_layer', FLAGS.final_tensor_name)
+    class_count, 'final_layer', final_tensor_name)
 
   with tf.name_scope('cross_entropy'):
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(
