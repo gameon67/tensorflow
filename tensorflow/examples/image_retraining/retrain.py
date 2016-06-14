@@ -122,6 +122,8 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_string('final_tensor_name', 'final_result',
                            """The name of the output classification layer in"""
                            """ the retrained graph.""")
+tf.app.flags.DEFINE_string('run_name', datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+                           """The name of the run for Tensorboard display""")
 
 # Controls the distortions used during training.
 tf.app.flags.DEFINE_boolean(
@@ -795,9 +797,10 @@ def add_prediction_step(result_tensor):
   return prediction_step
 
 def main(_):
-  if tf.gfile.Exists(FLAGS.summaries_dir):
-    tf.gfile.DeleteRecursively(FLAGS.summaries_dir)
-  tf.gfile.MakeDirs(FLAGS.summaries_dir)
+  tensorboard_summary_dir = FLAGS.summaries_dir + '/' + FLAGS.run_name
+  if tf.gfile.Exists(tensorboard_summary_dir):
+    tf.gfile.DeleteRecursively(tensorboard_summary_dir)
+  tf.gfile.MakeDirs(tensorboard_summary_dir)
 
   # Set up the pre-trained graph.
   maybe_download_and_extract()
@@ -846,9 +849,9 @@ def main(_):
 
   # Merge all the summaries and write them out to /tmp/retrain_logs (by default)
   merged = tf.merge_all_summaries()
-  train_writer = tf.train.SummaryWriter(FLAGS.summaries_dir + '/train',
+  train_writer = tf.train.SummaryWriter(tensorboard_summary_dir + '/train',
                                         sess.graph)
-  validation_writer = tf.train.SummaryWriter(FLAGS.summaries_dir + '/validation')
+  validation_writer = tf.train.SummaryWriter(tensorboard_summary_dir + '/validation')
 
   # Set up all our weights to their initial default values.
   init = tf.initialize_all_variables()
