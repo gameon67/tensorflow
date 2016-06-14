@@ -463,6 +463,25 @@ def cache_bottlenecks(sess, image_lists, image_dir, bottleneck_dir,
         if how_many_bottlenecks % 100 == 0:
           print(str(how_many_bottlenecks) + ' bottleneck files created.')
 
+def get_test_random_dist(image_lists):
+  """Calculates % of total testing images for each class.
+
+  Args:
+    image_lists: dictionary of each class and their training/val/testing data
+
+  Returns:
+    List of each class % of total testing set
+
+  Example:
+    test_class_counts = [2, 4, 4]
+    get_testing_random(test_class_counts) #returns [0.2, 0.4, 0.4, ]
+  """
+  test_class_counts = [len(image_lists[img_class]['testing']) for img_class in image_lists.keys()]
+  total_test_count = np.sum(test_class_counts)
+  return test_class_counts / total_test_count
+
+def get_test_random(dist):
+  return np.argmax(np.random.multinomial(1, dist))
 
 def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
                                   bottleneck_dir, image_dir, jpeg_data_tensor,
@@ -489,11 +508,15 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
     List of bottleneck arrays and their corresponding ground truths.
   """
   class_count = len(image_lists.keys())
+  test_class_dist = get_test_random_dist(image_lists)
   bottlenecks = []
   ground_truths = []
   img_paths = []
   for unused_i in range(how_many):
-    label_index = random.randrange(class_count)
+    if category == 'testing':
+      label_index = get_test_random(test_class_dist)
+    else:
+      label_index = random.randrange(class_count)
     label_name = list(image_lists.keys())[label_index]
     image_index = random.randrange(65536)
     bottleneck, img_path = get_or_create_bottleneck(sess, image_lists, label_name,
@@ -536,10 +559,14 @@ def get_random_distorted_bottlenecks(
     List of bottleneck arrays and their corresponding ground truths.
   """
   class_count = len(image_lists.keys())
+  test_class_dist = get_test_random_dist(image_lists)
   bottlenecks = []
   ground_truths = []
   for unused_i in range(how_many):
-    label_index = random.randrange(class_count)
+    if category == 'testing':
+      label_index = get_test_random(test_class_dist)
+    else:
+      label_index = random.randrange(class_count)
     label_name = list(image_lists.keys())[label_index]
     image_index = random.randrange(65536)
     image_path = get_image_path(image_lists, label_name, image_index, image_dir,
@@ -955,7 +982,8 @@ def main(_):
   'results': results,
   'classes': classes
   }
-  save(output, 'output')
+  save(output, 'output_' + FLAGS.run_name)
+  # save(image_lists, 'image_lists', add_datetime=True)
 
 
 if __name__ == '__main__':
