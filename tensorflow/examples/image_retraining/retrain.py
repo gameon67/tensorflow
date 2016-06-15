@@ -709,17 +709,20 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, activation_name='a
       with tf.name_scope('weights'):
         weights = weight_variable([input_dim, output_dim])
         variable_summaries(weights, layer_name + '/weights')
+      with tf.name_scope('dropout'):
+        keep_prob = tf.placeholder(tf.float32)
+        drop = tf.nn.dropout(input_tensor, keep_prob)
       with tf.name_scope('biases'):
         biases = bias_variable([output_dim])
         variable_summaries(biases, layer_name + '/biases')
       with tf.name_scope('Wx_plus_b'):
-        preactivate = tf.matmul(input_tensor, weights) + biases
+        preactivate = tf.matmul(drop, weights) + biases
         tf.histogram_summary(layer_name + '/pre_activations', preactivate)
       # activations = act(preactivate, 'activation')
       with tf.name_scope(activation_name):
         activations = act(preactivate)
         tf.histogram_summary(layer_name + '/activations', activations)
-    return preactivate, activations
+    return preactivate, activations, keep_prob
 
 def variable_summaries(var, name):
   """Attach a lot of summaries to a Tensor."""
@@ -777,7 +780,7 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
   # logits = tf.matmul(bottleneck_input, layer_weights,
   #                    name='final_matmul') + layer_biases
   # final_tensor = tf.nn.softmax(logits, name=final_tensor_name)
-  logits, final_tensor = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, \
+  logits, final_tensor, keep_prob = nn_layer(bottleneck_input, BOTTLENECK_TENSOR_SIZE, \
     class_count, 'final_layer', final_tensor_name)
 
   with tf.name_scope('cross_entropy'):
@@ -792,7 +795,7 @@ def add_final_training_ops(class_count, final_tensor_name, bottleneck_tensor):
         cross_entropy_mean)
 
   return (train_step, cross_entropy_mean, bottleneck_input, ground_truth_input,
-          final_tensor)
+          final_tensor, keep_prob)
 
 
 def add_evaluation_step(result_tensor, ground_truth_tensor):
@@ -866,7 +869,7 @@ def main(_):
 
   # Add the new layer that we'll be training.
   (train_step, cross_entropy, bottleneck_input, ground_truth_input,
-   final_tensor) = add_final_training_ops(len(image_lists.keys()),
+   final_tensor, keep_prob) = add_final_training_ops(len(image_lists.keys()),
                                           FLAGS.final_tensor_name,
                                           bottleneck_tensor)
 
@@ -906,7 +909,8 @@ def main(_):
       summary, train_accuracy, cross_entropy_value = sess.run(
           [merged, evaluation_step, cross_entropy],
           feed_dict={bottleneck_input: train_bottlenecks,
-                       ground_truth_input: train_ground_truth})
+                       ground_truth_input: train_ground_truth,
+                        keep_prob: 1.0})
       train_writer.add_summary(summary, i)
       print('%s: Step %d: Train accuracy = %.1f%%' % (datetime.now(), i,
                                                     train_accuracy * 100))
@@ -921,7 +925,8 @@ def main(_):
       summary, validation_accuracy = sess.run(
           [merged, evaluation_step],
           feed_dict={bottleneck_input: validation_bottlenecks,
-                     ground_truth_input: validation_ground_truth})
+                     ground_truth_input: validation_ground_truth,
+                        keep_prob: 1.0})
       validation_writer.add_summary(summary, i)
       print('%s: Step %d: Validation accuracy = %.1f%%' %
             (datetime.now(), i, validation_accuracy * 100))
@@ -930,7 +935,8 @@ def main(_):
       # step.
       summary, _ = sess.run([merged, train_step],
                feed_dict={bottleneck_input: train_bottlenecks,
-                          ground_truth_input: train_ground_truth})
+                          ground_truth_input: train_ground_truth,
+                        keep_prob: 1.0})
       train_writer.add_summary(summary, i)
       # I think the metadata is causing some issues with AWS GPU so commenting out for now
       # if i % 100 == 99:  # Record execution stats
@@ -963,7 +969,8 @@ def main(_):
   test_accuracy, predictions = sess.run(
       [evaluation_step, prediction_step],
       feed_dict={bottleneck_input: test_bottlenecks,
-                 ground_truth_input: test_ground_truth})
+                 ground_truth_input: test_ground_truth,
+                        keep_prob: 1.0})
   print('Final test accuracy = %.1f%%' % (test_accuracy * 100))
 
   # Write out the trained graph and labels with the weights stored as constants.
