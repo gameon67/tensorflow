@@ -112,7 +112,7 @@ tf.app.flags.DEFINE_integer(
     """ used much more often than the test set, and is an early indicator of"""
     """ how accurate the model is during training.""")
 tf.app.flags.DEFINE_integer(
-    'keep_prob', 1.0,
+    'keep_prob', 100,
     """Dropout - probability to keep.""")
 
 # File-system cache locations.
@@ -940,7 +940,7 @@ def main(_):
       summary, _ = sess.run([merged, train_step],
                feed_dict={bottleneck_input: train_bottlenecks,
                           ground_truth_input: train_ground_truth,
-                        keep_prob: FLAGS.keep_prob})
+                        keep_prob: FLAGS.keep_prob/100})
       train_writer.add_summary(summary, i)
       # I think the metadata is causing some issues with AWS GPU so commenting out for now
       # if i % 100 == 99:  # Record execution stats
