@@ -916,7 +916,7 @@ def main(_):
           [merged, evaluation_step, cross_entropy],
           feed_dict={bottleneck_input: train_bottlenecks,
                        ground_truth_input: train_ground_truth,
-                        keep_prob: 1.0})
+                        keep_prob: FLAGS.keep_prob/100})
       train_writer.add_summary(summary, i)
       print('%s: Step %d: Train accuracy = %.1f%%' % (datetime.now(), i,
                                                     train_accuracy * 100))
