@@ -85,6 +85,7 @@ tf.app.flags.DEFINE_string('output_graph', '/tmp/output_graph.pb',
                            """Where to save the trained graph.""")
 tf.app.flags.DEFINE_string('output_labels', '/tmp/output_labels.txt',
                            """Where to save the trained graph's labels.""")
+tf.app.flags.DEFINE_string('summaries_dir', '/tmp/retrain_logs', 'Summaries directory')
 
 # Details of the training configuration.
 tf.app.flags.DEFINE_integer('how_many_training_steps', 4000,
@@ -110,6 +111,9 @@ tf.app.flags.DEFINE_integer(
     """How many images to use in an evaluation batch. This validation set is"""
     """ used much more often than the test set, and is an early indicator of"""
     """ how accurate the model is during training.""")
+tf.app.flags.DEFINE_integer(
+    'keep_prob', 1.0,
+    """Dropout - probability to keep.""")
 
 # File-system cache locations.
 tf.app.flags.DEFINE_string('model_dir', '/tmp/imagenet',
@@ -141,7 +145,7 @@ tf.app.flags.DEFINE_integer(
     'random_brightness', 0,
     """A percentage determining how much to randomly multiply the training"""
     """ image input pixels up or down by.""")
-tf.app.flags.DEFINE_string('summaries_dir', '/tmp/retrain_logs', 'Summaries directory')
+
 
 # These are all parameters that are tied to the particular model architecture
 # we're using for Inception v3. These include things like tensor names and their
@@ -936,7 +940,7 @@ def main(_):
       summary, _ = sess.run([merged, train_step],
                feed_dict={bottleneck_input: train_bottlenecks,
                           ground_truth_input: train_ground_truth,
-                        keep_prob: 1.0})
+                        keep_prob: FLAGS.keep_prob})
       train_writer.add_summary(summary, i)
       # I think the metadata is causing some issues with AWS GPU so commenting out for now
       # if i % 100 == 99:  # Record execution stats
