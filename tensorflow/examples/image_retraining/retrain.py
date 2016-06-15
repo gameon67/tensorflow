@@ -716,6 +716,7 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, activation_name='a
       with tf.name_scope('dropout'):
         keep_prob = tf.placeholder(tf.float32)
         drop = tf.nn.dropout(input_tensor, keep_prob)
+        variable_summaries(drop, layer_name + '/dropout')
       with tf.name_scope('biases'):
         biases = bias_variable([output_dim])
         variable_summaries(biases, layer_name + '/biases')
