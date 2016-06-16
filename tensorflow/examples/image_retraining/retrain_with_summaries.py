@@ -724,6 +724,22 @@ def add_evaluation_step(result_tensor, ground_truth_tensor):
     tf.scalar_summary('accuracy', evaluation_step)
   return evaluation_step
 
+def add_auc_step(result_tensor, ground_truth_tensor):
+  """Inserts the operations we need to evaluate the accuracy of our results.
+
+  Args:
+    result_tensor: The new final node that produces results.
+    ground_truth_tensor: The node we feed ground truth data
+    into.
+
+  Returns:
+    Nothing.
+  """
+  with tf.name_scope('streaming_auc'):
+    auc_step = tf.contrib.metrics.streaming_auc(result_tensor, ground_truth_tensor)
+    tf.scalar_summary('streaming_auc', auc_step)
+  return auc_step
+
 
 def main(_):
   # Setup the directory we'll write summaries to for TensorBoard
@@ -774,6 +790,8 @@ def main(_):
   # Create the operations we need to evaluate the accuracy of our new layer.
   evaluation_step = add_evaluation_step(final_tensor, ground_truth_input)
 
+  auc_step = add_auc_step(final_tensor, ground_truth_input)
+
   # Merge all the summaries and write them out to /tmp/retrain_logs (by default)
   merged = tf.merge_all_summaries()
   train_writer = tf.train.SummaryWriter(FLAGS.summaries_dir + '/train',
@@ -809,7 +827,7 @@ def main(_):
     is_last_step = (i + 1 == FLAGS.how_many_training_steps)
     if (i % FLAGS.eval_step_interval) == 0 or is_last_step:
       train_accuracy, cross_entropy_value = sess.run(
-          [evaluation_step, cross_entropy],
+          [evaluation_step, cross_entropy, auc_step],
           feed_dict={bottleneck_input: train_bottlenecks,
                      ground_truth_input: train_ground_truth})
       print('%s: Step %d: Train accuracy = %.1f%%' % (datetime.now(), i,
@@ -824,7 +842,7 @@ def main(_):
       # Run a validation step and capture training summaries for TensorBoard
       # with the `merged` op.
       validation_summary, validation_accuracy = sess.run(
-          [merged, evaluation_step],
+          [merged, evaluation_step, auc_step],
           feed_dict={bottleneck_input: validation_bottlenecks,
                      ground_truth_input: validation_ground_truth})
       validation_writer.add_summary(validation_summary, i)
