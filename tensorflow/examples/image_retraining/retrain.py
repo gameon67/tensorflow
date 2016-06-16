@@ -657,7 +657,7 @@ def get_val_test_bottlenecks(sess, image_lists, category,
       bottlenecks.append(bottleneck_values)
       ground_truths.append(ground_truth)
       img_paths.append(bottleneck_path)
-    return bottlenecks, ground_truths, img_paths
+  return bottlenecks, ground_truths, img_paths
 
 
 def get_random_distorted_bottlenecks(
