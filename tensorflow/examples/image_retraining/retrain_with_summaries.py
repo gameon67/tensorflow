@@ -739,9 +739,7 @@ def add_auc_step(result_tensor, ground_truth_tensor):
   #   auc_step = tf.contrib.metrics.streaming_auc(result_tensor, ground_truth_tensor)
   #   variable_summaries('streaming_auc', auc_step)
   # return auc_step
-  with tf.name_scope('test_accuracy'):
-    accuracy, update_op_acc = tf.contrib.metrics.streaming_accuracy(result_tensor, ground_truth_tensor)
-  return accuracy, update_op_acc
+  pass
 
 
 def main(_):
@@ -794,7 +792,7 @@ def main(_):
   evaluation_step = add_evaluation_step(final_tensor, ground_truth_input)
 
   # auc_step = add_auc_step(final_tensor, ground_truth_input)
-  accuracy, update_op_acc = add_auc_step(final_tensor, ground_truth_input)
+  accr, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
 
   # Merge all the summaries and write them out to /tmp/retrain_logs (by default)
   merged = tf.merge_all_summaries()
@@ -847,15 +845,13 @@ def main(_):
               bottleneck_tensor))
       # Run a validation step and capture training summaries for TensorBoard
       # with the `merged` op.
-      validation_summary, validation_accuracy, acc1 = sess.run(
-          [merged, evaluation_step, update_op_acc],
+      validation_summary, validation_accuracy = sess.run(
+          [merged, evaluation_step],
           feed_dict={bottleneck_input: validation_bottlenecks,
                      ground_truth_input: validation_ground_truth})
       validation_writer.add_summary(validation_summary, i)
       print('%s: Step %d: Validation accuracy = %.1f%%' %
             (datetime.now(), i, validation_accuracy * 100))
-      print('%s: Step %d: Validation accuracy2 = %.1f%%' %
-            (datetime.now(), i, acc2 * 100))
 
   # We've completed all our training, so run a final test evaluation on
   # some new images we haven't used before.
@@ -863,12 +859,12 @@ def main(_):
       sess, image_lists, FLAGS.test_batch_size, 'testing',
       FLAGS.bottleneck_dir, FLAGS.image_dir, jpeg_data_tensor,
       bottleneck_tensor)
-  test_accuracy, acc2 = sess.run(
-      [evaluation_step, accuracy],
+  test_accuracy = sess.run(
+      [evaluation_step],
       feed_dict={bottleneck_input: test_bottlenecks,
                  ground_truth_input: test_ground_truth})
   print('Final test accuracy = %.1f%%' % (test_accuracy * 100))
-  print('Final test accuracy2 = %.1f%%' % (acc2 * 100))
+  print('Final test accuracy2 = %.1f%%' % (accr * 100))
 
   # Write out the trained graph and labels with the weights stored as constants.
   output_graph_def = graph_util.convert_variables_to_constants(
