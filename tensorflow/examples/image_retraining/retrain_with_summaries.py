@@ -791,7 +791,8 @@ def main(_):
   # Create the operations we need to evaluate the accuracy of our new layer.
   evaluation_step = add_evaluation_step(final_tensor, ground_truth_input)
 
-  _, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
+  with tf.name_scope('accuracy_test'):
+    _, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
   # sess.run(tf.initialize_local_variables())
   # auc_step = add_auc_step(final_tensor, ground_truth_input)
   # accr, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
@@ -842,6 +843,7 @@ def main(_):
                                                  cross_entropy_value))
       print('%s: Step %d: Train accuracy2 = %.1f%%' % (datetime.now(), i,
                                                       acc1 * 100))
+      print(acc1)
       validation_bottlenecks, validation_ground_truth = (
           get_random_cached_bottlenecks(
               sess, image_lists, FLAGS.validation_batch_size, 'validation',
