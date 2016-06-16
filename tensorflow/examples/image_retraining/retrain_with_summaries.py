@@ -791,8 +791,8 @@ def main(_):
   # Create the operations we need to evaluate the accuracy of our new layer.
   evaluation_step = add_evaluation_step(final_tensor, ground_truth_input)
 
-  _, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
-  sess.run(tf.initialize_local_variables())
+  # _, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
+  # sess.run(tf.initialize_local_variables())
   # auc_step = add_auc_step(final_tensor, ground_truth_input)
   # accr, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
 
