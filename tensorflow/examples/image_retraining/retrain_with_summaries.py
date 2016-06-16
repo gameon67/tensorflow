@@ -791,8 +791,11 @@ def main(_):
   # Create the operations we need to evaluate the accuracy of our new layer.
   evaluation_step = add_evaluation_step(final_tensor, ground_truth_input)
 
+  predictions = tf.random_uniform((10, 3), maxval=3, dtype=tf.int64, seed=1)
+  labels = tf.random_uniform((10, 3), maxval=3, dtype=tf.int64, seed=1)
+  accuracy, update_op = tf.contrib.metrics.streaming_accuracy(predictions, labels)
   # auc_step = add_auc_step(final_tensor, ground_truth_input)
-  accr, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
+  # accr, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
 
   # Merge all the summaries and write them out to /tmp/retrain_logs (by default)
   merged = tf.merge_all_summaries()
@@ -806,6 +809,7 @@ def main(_):
 
   # Run the training for as many cycles as requested on the command line.
   for i in range(FLAGS.how_many_training_steps):
+    sess.run(update_op)
     # Get a catch of input bottleneck values, either calculated fresh every time
     # with distortions applied, or from the cache stored on disk.
     if do_distort_images:
@@ -828,16 +832,14 @@ def main(_):
     # Every so often, print out how well the graph is training.
     is_last_step = (i + 1 == FLAGS.how_many_training_steps)
     if (i % FLAGS.eval_step_interval) == 0 or is_last_step:
-      train_accuracy, cross_entropy_value, acc = sess.run(
-          [evaluation_step, cross_entropy, update_op_acc],
+      train_accuracy, cross_entropy_value = sess.run(
+          [evaluation_step, cross_entropy],
           feed_dict={bottleneck_input: train_bottlenecks,
                      ground_truth_input: train_ground_truth})
       print('%s: Step %d: Train accuracy = %.1f%%' % (datetime.now(), i,
                                                       train_accuracy * 100))
       print('%s: Step %d: Cross entropy = %f' % (datetime.now(), i,
                                                  cross_entropy_value))
-      print('%s: Step %d: test accuracy = %f' % (datetime.now(), i,
-                                                 acc))
       validation_bottlenecks, validation_ground_truth = (
           get_random_cached_bottlenecks(
               sess, image_lists, FLAGS.validation_batch_size, 'validation',
@@ -864,7 +866,7 @@ def main(_):
       feed_dict={bottleneck_input: test_bottlenecks,
                  ground_truth_input: test_ground_truth})
   print('Final test accuracy = %.1f%%' % (test_accuracy * 100))
-  print('Final test accuracy2 = %.1f%%' % (accr * 100))
+  print('Final test accuracy2 = %.1f%%' % (accuracy.eval() * 100))
 
   # Write out the trained graph and labels with the weights stored as constants.
   output_graph_def = graph_util.convert_variables_to_constants(
