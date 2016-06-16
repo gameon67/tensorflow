@@ -791,9 +791,7 @@ def main(_):
   # Create the operations we need to evaluate the accuracy of our new layer.
   evaluation_step = add_evaluation_step(final_tensor, ground_truth_input)
 
-  predictions = tf.random_uniform((10, 3), maxval=3, dtype=tf.int64, seed=1)
-  labels = tf.random_uniform((10, 3), maxval=3, dtype=tf.int64, seed=1)
-  accuracy, update_op = tf.contrib.metrics.streaming_accuracy(predictions, labels)
+  _, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
   sess.run(tf.initialize_local_variables())
   # auc_step = add_auc_step(final_tensor, ground_truth_input)
   # accr, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
@@ -833,14 +831,16 @@ def main(_):
     # Every so often, print out how well the graph is training.
     is_last_step = (i + 1 == FLAGS.how_many_training_steps)
     if (i % FLAGS.eval_step_interval) == 0 or is_last_step:
-      train_accuracy, cross_entropy_value = sess.run(
-          [evaluation_step, cross_entropy],
+      train_accuracy, cross_entropy_value, acc1 = sess.run(
+          [evaluation_step, cross_entropy, update_op_acc],
           feed_dict={bottleneck_input: train_bottlenecks,
                      ground_truth_input: train_ground_truth})
       print('%s: Step %d: Train accuracy = %.1f%%' % (datetime.now(), i,
                                                       train_accuracy * 100))
       print('%s: Step %d: Cross entropy = %f' % (datetime.now(), i,
                                                  cross_entropy_value))
+      print('%s: Step %d: Train accuracy2 = %.1f%%' % (datetime.now(), i,
+                                                      acc1 * 100))
       validation_bottlenecks, validation_ground_truth = (
           get_random_cached_bottlenecks(
               sess, image_lists, FLAGS.validation_batch_size, 'validation',
@@ -866,8 +866,8 @@ def main(_):
       [evaluation_step],
       feed_dict={bottleneck_input: test_bottlenecks,
                  ground_truth_input: test_ground_truth})
-  # print('Final test accuracy = %.1f%%' % (test_accuracy * 100))
-  print('Final test accuracy2 = %.1f%%' % (accuracy.eval() * 100))
+  print('Final test accuracy = %.1f%%' % (test_accuracy * 100))
+  # print('Final test accuracy2 = %.1f%%' % (accr2 * 100))
 
   # Write out the trained graph and labels with the weights stored as constants.
   output_graph_def = graph_util.convert_variables_to_constants(
