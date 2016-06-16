@@ -636,7 +636,6 @@ def get_val_test_bottlenecks(sess, image_lists, category,
       image_path = os.path.join(image_dir, sub_dir, image)
       bottleneck_path = image_path + '.txt'
       if not os.path.exists(bottleneck_path):
-        print('%s does not exist, attempting to create it' % bottleneck_path)
         if not gfile.Exists(image_path):
           tf.logging.fatal('File does not exist %s', image_path)
         image_data = gfile.FastGFile(image_path, 'rb').read()
@@ -1126,7 +1125,7 @@ def main(_):
   }
   save(output, 'output_' + FLAGS.run_name)
 
-  save(image_lists, 'image_lists', add_datetime=True)
+  # save(image_lists, 'image_lists', add_datetime=True)
 
 
 if __name__ == '__main__':
