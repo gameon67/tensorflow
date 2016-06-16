@@ -794,6 +794,7 @@ def main(_):
   predictions = tf.random_uniform((10, 3), maxval=3, dtype=tf.int64, seed=1)
   labels = tf.random_uniform((10, 3), maxval=3, dtype=tf.int64, seed=1)
   accuracy, update_op = tf.contrib.metrics.streaming_accuracy(predictions, labels)
+  sess.run(tf.initialize_local_variables())
   # auc_step = add_auc_step(final_tensor, ground_truth_input)
   # accr, update_op_acc = tf.contrib.metrics.streaming_accuracy(final_tensor, ground_truth_input)
 
